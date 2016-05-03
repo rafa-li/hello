@@ -1,0 +1,1 @@
+create table csp_trid_securities(code varchar(32) not null,cname varchar(32) not null,amount int not null,import_date char(8) not null, primary key (code,import_date))

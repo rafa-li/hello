@@ -1,0 +1,10 @@
+node_modules
+rest/*
+!rest/index.js
+public/mvc.js
+public/mvc.map.js
+public/rest-index.js
+config.json
+public/build.js
+start.bat
+uploadFile/*

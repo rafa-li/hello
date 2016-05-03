@@ -1,0 +1,1 @@
+CREATE TABLE csp_group_wish_list (id int(10) PRIMARY KEY auto_increment, cindex varchar(32), code varchar(32), cname varchar(32), amount varchar(32), market_value varchar(32), traderid varchar(32))

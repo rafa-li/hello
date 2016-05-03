@@ -1,0 +1,1 @@
+ALTER TABLE csp_group_wish_list ADD import_date char(8)

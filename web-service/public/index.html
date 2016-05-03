@@ -1,0 +1,53 @@
+<!--
+/**
+* @file 主页索引html文件
+* @author luke
+* @version 1.0
+* @copyright 2016 All Right Reserved @ LeHighHongking
+*/
+-->
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+    <meta charset="utf-8">
+    <title>ISON 客户自助平台</title>
+    <link rel="stylesheet" type="text/css" href="lib/semantic/semantic.css">
+    <link rel="stylesheet" type="text/css" href="lib/jquery-ui.css">
+    <link rel="stylesheet" href="css/lobibox.css">
+    <link rel="stylesheet" href="css/index.css">
+    <script src="lib/jquery-2.2.0.js" /></script>
+    <script src="lib/jquery-ui.js" /></script>
+    <script src="lib/jquery-anchorlayout.js" /></script>
+    <script src="lib/director.js" /></script>
+    <script src="lib/semantic/semantic.js"></script>
+    <script src="lib/vue.js"></script>
+    <script src="lib/date.js"></script>
+    <script src="rest-index.js"></script>
+    <script src="mvc.js"></script>
+    <script src="lib/notifications.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="lib/socket.js"></script>
+    <script src="lib/csp.js"></script>
+ </head>
+
+  <body class="app">
+    <div class="pusher">
+        <component :is="topview" ></component>
+    </div>
+
+<script type="text/javascript">
+    // 初始化 semantic ui 控件
+
+    jQuery('.ui.dropdown')
+      .dropdown();
+    jQuery('.ui.checkbox')
+      .checkbox();
+    jQuery(".js-acid-item a").click(function(){
+       jQuery(".js-acid-item a").stop().removeClass("selected");
+       jQuery(this).stop().addClass("selected")
+       })
+        
+</script>
+
+  </body>
+</html>
