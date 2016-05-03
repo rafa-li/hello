@@ -1,25 +1,3 @@
-/**
- *  数据库中csp相关表的更新  created by lizhexi 2016.04.22
- *
- */
-/*
--    作者：     lizhexi
--    日期：     2016.04.22
--    操作对象： csp_trid_securities
--    描述：     券表添加trid字段并更改约束
-*/
-ALTER TABLE csp_trid_securities ADD trid VARCHAR(32)  NOT NULL;
-ALTER TABLE csp_trid_securities DROP PRIMARY KEY;
-ALTER TABLE csp_trid_securities ADD CONSTRAINT trid_sec PRIMARY KEY (code,trid);
-/*
--    作者：     lizhexi
--    日期：     2016.04.25
--    操作对象： csp_group_wish_list
--    描述：     小组心愿清单添加trid字段并更改约束
-*/
-ALTER TABLE csp_group_wish_list ADD trid VARCHAR(32)  NOT NULL;
-ALTER TABLE csp_group_wish_list DROP PRIMARY KEY;
-ALTER TABLE csp_group_wish_list ADD CONSTRAINT group_wish PRIMARY KEY (tid,code,trid);
 /*
 SQLyog Ultimate v11.24 (32 bit)
 MySQL - 5.6.27-0ubuntu0.14.04.1 : Database - ison2b
@@ -27,14 +5,6 @@ MySQL - 5.6.27-0ubuntu0.14.04.1 : Database - ison2b
 */
 
 
-/*
- * ******************************************************START***************************************************
- */
- 
-/*
--    作者：     zf
--    日期：     2016.04.27
-*/
 /*!40101 SET NAMES utf8 */;
 
 /*!40101 SET SQL_MODE=''*/;
@@ -101,8 +71,3 @@ CREATE TABLE `csp_exchange_list` (
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-/*
- * ***************************************************END*********************************************
- */
-
-

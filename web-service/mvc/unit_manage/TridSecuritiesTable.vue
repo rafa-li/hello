@@ -161,29 +161,22 @@
 var maid = ''
 var trid = ''
 
-/**
-* @desc 从登录session获取oid
-* @func getOid
-* @author lizhexi
-*/
-export function getOid(postman){
-    var oid = postman.req.session.oid
-    postman({oid:oid});
 
-}
 /**
 * @desc 获取登录者的conlevel
 * @func getConlevel
 * @author lizhexi
 */
-export function getConlevel(postman,oid){
+export function getConlevel(postman){
+    var oid = postman.req.session.oid
     var retData={
         "error":false,
         "conlevel":'',
         "cellid":'',
+        "oid":oid,
     }
-    var conSQL = "SELECT max(conlevel) AS conlevel ,cellid FROM tsoper_conlevel WHERE "
-               + "( conlevel= 2 OR conlevel =20 OR conlevel =21 OR conlevel =22) AND oid = '"
+    var conSQL = "SELECT conlevel ,cellid FROM tsoper_conlevel WHERE "
+               + "( conlevel =29 OR conlevel =28 ) AND oid = '"
                + oid+"'";
     ison.db.query(conSQL,function(err,data){
         if(!err){
@@ -759,15 +752,13 @@ export var  events = {
 export function refresh() {
    csp.fixTableHead("js-trid-securities-table", "100%", "100%")
     var self = this;
-getOid(function(err,data){
-    if(!err){
-          self.oid = data.oid
-          self.maid = data.oid.split(".")[0];
-          console.log("maid--->",self.maid);
-          getConlevel(self.oid,function(err,data){
+
+          getConlevel(function(err,data){
               if(!data.error){
+                  self.oid = data.oid
+                  self.maid = data.oid.split(".")[0];
                 curConlevel = data.conlevel
-                if(curConlevel == 20){
+                if(curConlevel == 29){
                     getTridSecuritiesTable(curTrid,self.maid,function(err, receiveData){
                         if(err){
                             console.log(err);
@@ -799,9 +790,6 @@ getOid(function(err,data){
                  console.log("err--->",err);
             }
         })
-
-    }
-})
 
   }
  /**
@@ -842,15 +830,13 @@ export function ready() {
      var self = this
      console.log("--------------->TridSecuritiesTable ready");
      self.refresh();
-     getOid(function(err,data){
-         if(!err){
-             self.oid = data.oid;
-             self.maid = data.oid.split(".")[0];
-             console.log("maid--->",self.maid);
-             getConlevel(self.oid,function(err,data){
+
+             getConlevel(function(err,data){
                  if(!data.error){
+                     self.oid = data.oid;
+                     self.maid = data.oid.split(".")[0];
                      curConlevel = data.conlevel
-                     if(curConlevel == 20){
+                     if(curConlevel == 29){
                          curMaid = data.cellid
                          console.log("curMaid--->",curMaid);
                          self.$refs.trid_dropdown.updateDropdownList(curMaid)
@@ -862,8 +848,7 @@ export function ready() {
                      console.log("err--->",err);
                  }
              })
-         }
-     })
+
      document.ondblclick = function(event){
          //兼顾IE 火狐
          var event =  event || window.event

@@ -111,12 +111,6 @@
      .js-random-results{
          margin-top: 1.5em;
      }
-    /*.js-random-results-header{
-         position:absolute;
-     }
-     .js-random-results-body{
-          height:92%;
-     }*/
      .ui.button.js-random-div-on-btn{
          border:0px;
          background-color: #7999D8;
@@ -177,9 +171,8 @@ var itemPreDiv=[];
 var unitWishPre=[];
 var market_value=[];
 var bp_data=[];
-var allStockFlag=1;
-var teamAllocateFlag=1;
-
+var UnitWish=[];
+var ItemPreDiv=[];
 /*
 *由登录获取资产管理人id
 */
@@ -187,41 +180,7 @@ var teamAllocateFlag=1;
 export function getMaid(postman){
     postman({maid:postman.req.session.maid});
 }
-/**
-* @brief 判断是否有未分配完的股票
-* @author Liulin
-* @param[in] ItemPreDiv 待分配的总券
-* @return allStockFlag标志。1为分配完成，否则为0；
-*/
 
-  function checkUnitStock(ItemPreDiv){
-
-      for(var i=0;i<ItemPreDiv.length;i++){
-          if(ItemPreDiv[i].amount){
-              allStockFlag=0;
-          }
-      }
-        return allStockFlag;
-
-  }
-  /**
-  * @brief 判断是否有未满足的心愿
-  * @author Liulin
-  * @param[in] UnitWish 小组心愿清单
-  * @return teamAllocateFlag标志。1为分配完成，否则为0；
-  */
-
-  function checkGroupWish(UnitWish){
-
-    for(var i=0;i<UnitWish.length;i++){
-        for(var j=0;j<UnitWish[i].children.length;j++){
-            if(UnitWish[i].children[j].flag!==1){
-                teamAllocateFlag=0;
-            }
-        }
-    }
-    return teamAllocateFlag;
- }
 
  /**
  * @brief 克隆一个对象
@@ -254,6 +213,14 @@ export function getMaid(postman){
      }
      return o;
  }
+ function randomSort(A){
+     var a=[];
+     for(var m=0;m<A.length;m++){
+      a[m]=m;
+     };
+     a.sort(function(){ return 0.5 - Math.random() });
+     return a;
+ }
  //结果展示
 
  /**
@@ -266,7 +233,7 @@ export function getMaid(postman){
 
      Step.Step(function(data){
          var that=this;
-         var sql_market_value="SELECT cname,code,preclose FROM tscode where  code in (select code from csp_trid_securities where trid="+"'"+trid+"'"+") "
+         var sql_market_value="SELECT cname,code,preclose FROM tscode where  code in (select code from csp_trid_securities where trid='"+trid+"') "
           ison.db.query(sql_market_value,function(err,value_data){
               market_value=value_data;
             //   console.log("dddddddddd",market_value);
@@ -275,7 +242,7 @@ export function getMaid(postman){
      },function(data){
          //取出总券表，itemPreDiv取出来的总表信息
              var that=this;
-             var sql="select a.code,a.cname,a.amount from csp_trid_securities a where maid="+"'"+maid+"'"+"and trid="+"'"+trid+"'"
+             var sql="select a.code,a.cname,a.amount from csp_trid_securities a where maid='"+maid+"'and trid='"+trid+"'"
              ison.db.query(sql,function(err,data){
                  var length=data.length;
                  var indexStock=-1;//总券中股票的标号
@@ -293,24 +260,31 @@ export function getMaid(postman){
                          }
                      }
                      itemPreDiv[indexStock] = itemStock;
-
                  }
                    that.step(itemPreDiv);
              })
 
      },function(data){
          var that=this;
+         var a=randomSort(itemPreDiv);
+         console.log("A",JSON.stringify(a));
+         for(var j=0;j<a.length;j++){
+             ItemPreDiv[j]=itemPreDiv[a[j]];
+         }
+         console.log("ItemPreDiv",JSON.stringify(ItemPreDiv));
+         that.step(ItemPreDiv);
+     },function(data){
+         var that=this;
          var sql_bp="SELECT SUM(t.bp) AS bp,i.* FROM `csp_team_member` AS m LEFT JOIN `tstrader` AS t ON m.traderid = t.traderid AND m.trid = t.trid LEFT JOIN `csp_team_info` AS i ON m.tid = i.tid  GROUP BY m.tid"
              ison.db.query(sql_bp,function(err,data){
                  bp_data=data;
-
                  that.step(bp_data)
              })
 
      },function(bp_data){
                  var that=this;
 
-                 var sql_wish = "select a.tid,a.cindex,a.code,a.cname,a.amount from csp_group_wish_list as a inner join "+"("+"select tid from csp_team_info where trid='"+trid+"')"+ "as b on a.tid=b.tid"
+                 var sql_wish = "select tid,cindex,code,cname,amount from csp_group_wish_list where trid='"+trid+"' order by tid,cindex*1"
                  ison.db.query(sql_wish, function(err, data) {
                  var length = data.length
                  var tidPre = ''
@@ -320,7 +294,6 @@ export function getMaid(postman){
                      if(tidPre !== data[i].tid){
                          indexTid++
                          tidPre = data[i].tid
-
                          var itemtid = {tid:'',tid_bp:'',allocated_sum_value:'', children:[]}
                          itemtid.tid=data[i].tid
                          itemtid.allocated_sum_value=0;
@@ -334,7 +307,6 @@ export function getMaid(postman){
                          unitWishPre[indexTid] = itemtid
                          indexCindex = -1
                      }
-
                      indexCindex++
                      var itemGroup={cindex:'',code:'',cname:'',amount:'',flag:'',allocated_value:'',allocated_amount:''}
                      itemGroup.cindex=data[i].cindex;
@@ -348,6 +320,7 @@ export function getMaid(postman){
                      unitWishPre[indexTid].children[indexCindex] = itemGroup;
 
                  }
+                //  console.log("this-is-unitwishget",JSON.stringify(unitWishPre));
                   that.step(unitWishPre);
      })
  },function(data){
@@ -359,153 +332,93 @@ export function getMaid(postman){
      });
 
  },function(data){
-     var that=this;
-     var ItemPreDiv=itemPreDiv;//取出数据便于对其操作
-     var UnitWish= clone(unitWishPre);
-    //  console.log("itemPreDiv-----------",itemPreDiv)
-    //  console.log("1---->",unitWishPre);
-    while (!checkUnitStock(ItemPreDiv)) {
-         //总券未分配完
-         allStockFlag = 1;
-         while (!checkGroupWish(UnitWish)) {
-            //小组愿望清单未被分配完
-            teamAllocateFlag = 1;
-            var i = 0;
-            //随机分券
-            var index = Math.floor(Math.random() * UnitWish.length);
-            var cindexLength = UnitWish[index].children.length;
-            while (i < cindexLength && UnitWish[index].children[i].flag === 1) {
-                 i++;
-                }
-            if (i === cindexLength) {
-             //该小组分配完
-              console.log("该小组分配完",cindexLength);
+        var that=this;
+        UnitWish= clone(unitWishPre);
+        //  console.log("unitwish",JSON.stringify(UnitWish));
+         var maxUnitWishLength=maxLength(UnitWish);
+         for(var i=0;i<maxUnitWishLength;i++){
+             //给这一轮的小组随机排序---满足心愿的顺序
+              console.log("我就看看你循环几次00",i)
+             var a=randomSort(UnitWish);
+            // console.log("a是什么",a);
+             for(var j=0;j<a.length;j++){
+                //  console.log("我就看看你循环几次11")
+                 var aj=a[j];
+                //  console.log("每次取的aj究竟是不是不同",aj);
+
+                 if(UnitWish[aj].children[i]!=undefined){
+                     //从总券中查询 ItemPreDiv
+                    //  console.log("另一个小组究竟取出来没",UnitWish[aj].children[i].cname)
+                     for (var k = 0; k < ItemPreDiv.length; k++) {
+                              console.log("我就看看你循环几次22")
+                        if (UnitWish[aj].children[i].cname===ItemPreDiv[k].cname) {
+                            console.log("哪只券",UnitWish[aj].children[i].cname)
+                            console.log("haisheng",ItemPreDiv[k].amount)
+                            if (ItemPreDiv[k].amount > UnitWish[aj].children[i].amount) {
+                                 UnitWish[aj].children[i].allocated_amount = UnitWish[aj].children[i].amount;
+                                 ItemPreDiv[k].amount = parseInt(ItemPreDiv[k].amount) - parseInt(UnitWish[aj].children[i].amount);
+                                 UnitWish[aj].children[i].allocated_value = Number(UnitWish[aj].children[i].allocated_amount) *Number(ItemPreDiv[k].market_value);
+                                 UnitWish[aj].allocated_sum_value=Number(UnitWish[aj].allocated_sum_value)+Number(UnitWish[aj].children[i].allocated_value);
+                                 console.log(">>>>>",UnitWish[aj].children[i].allocated_amount)
+                                 console.log("haisheng",ItemPreDiv[k].amount)
+                                }
+                            else if (ItemPreDiv[k].amount <= UnitWish[aj].children[i].amount) {
+
+                                    UnitWish[aj].children[i].allocated_amount = ItemPreDiv[k].amount;
+                                    ItemPreDiv[k].amount = 0;
+                                    UnitWish[aj].children[i].allocated_value = Number(UnitWish[aj].children[i].allocated_amount) *Number(ItemPreDiv[k].market_value);
+                                    ItemPreDiv[k].market_value = 0;
+                                     UnitWish[aj].allocated_sum_value=Number(UnitWish[aj].allocated_sum_value)+Number(UnitWish[aj].children[i].allocated_value);
+                                    console.log("<<<<<",UnitWish[aj].children[i].allocated_amount)
+                                    console.log("哪只券小",UnitWish[aj].children[i].cname);
+                                    console.log("haisheng",ItemPreDiv[k].amount);
+                                }
+
+                             break;
+                        }
+
+                            //  console.log("我就看看你循环几次33")
+
+                     }
+                 }
              }
-            if (i <cindexLength) {
+         }//小组愿望清单分配完
 
-             //index 小组i+1优先级未分配
-             //从总券中查询 ItemPreDiv
-             for (var k = 0; k < ItemPreDiv.length; k++) {
-
-                if (ItemPreDiv[k].code === UnitWish[index].children[i].code) {
-                    UnitWish[index].children[i].flag = 1; //标记分配完成
-                    if (ItemPreDiv[k].amount > UnitWish[index].children[i].amount ){
-                         UnitWish[index].children[i].allocated_amount = UnitWish[index].children[i].amount;
-                         ItemPreDiv[k].amount = parseInt(ItemPreDiv[k].amount) - parseInt(UnitWish[index].children[i].amount);
-                         UnitWish[index].children[i].allocated_value = Number(UnitWish[index].children[i].amount) *Number(ItemPreDiv[k].market_value);
-                         UnitWish[index].allocated_sum_value=Number(UnitWish[index].allocated_sum_value)+Number(UnitWish[index].children[i].allocated_value);
-
-                        } else if (ItemPreDiv[k].amount <= UnitWish[index].children[i].amount) {
-
-                                 UnitWish[index].children[i].allocated_amount = ItemPreDiv[k].amount;
-                                 ItemPreDiv[k].amount = 0;
-                                 UnitWish[index].children[i].allocated_value = Number(UnitWish[index].children[i].allocated_amount) *Number(ItemPreDiv[k].market_value);
-                                 ItemPreDiv[k].market_value = 0;
-                                 UnitWish[index].allocated_sum_value=Number(UnitWish[index].allocated_sum_value)+Number(UnitWish[index].children[i].allocated_value);
-                                 }
-                                 break;
-                }
-
-             }
-          }
-
-        } //小组愿望清单分配完
+        // }
         //小组愿望清单分配完，总券表有剩余，进行均分操作
         var leaveOrNot=averageAllocated(ItemPreDiv,UnitWish);
         if(leaveOrNot){
             postman({leave:true})
             return;
+        }//总表分配完
+        else{
+            that.step();
         }
-
-    } //总表分配完
+},function(data){
+    var that=this;
     var mysql;
     for(var i=0;i<UnitWish.length;i++){
-       for(var j=0;j<UnitWish[i].children.length;j++){
-           mysql="insert into csp_random_allocated_results (tid,cindex,code,cname,amount,post_allocated_amount,post_allocated_value,trid)VALUES"
-           +"('"+UnitWish[i].tid+"','"+UnitWish[i].children[j].cindex+"','"+UnitWish[i].children[j].code+"','"
-           +UnitWish[i].children[j].cname+"','"+UnitWish[i].children[j].amount+"','"
-           +UnitWish[i].children[j].allocated_amount+"','"
-           +UnitWish[i].children[j].allocated_value+"','"
-           +trid+"')"
-           +"ON DUPLICATE KEY UPDATE post_allocated_amount='"+UnitWish[i].children[j].allocated_amount+"',"
-           +"post_allocated_value='"+UnitWish[i].children[j].allocated_value+"'"
-           ison.db.query(mysql,function(err,data){
-             that.step();
-           });
-       }
-   }
+        for(var j=0;j<UnitWish[i].children.length;j++){
+            mysql="insert into csp_random_allocated_results (tid,cindex,code,cname,amount,post_allocated_amount,post_allocated_value,trid)VALUES"
+            +"('"+UnitWish[i].tid+"','"+UnitWish[i].children[j].cindex+"','"+UnitWish[i].children[j].code+"','"
+            +UnitWish[i].children[j].cname+"','"+UnitWish[i].children[j].amount+"','"
+            +UnitWish[i].children[j].allocated_amount+"','"
+            +UnitWish[i].children[j].allocated_value+"','"
+            +trid+"')"
+            +"ON DUPLICATE KEY UPDATE post_allocated_amount='"+UnitWish[i].children[j].allocated_amount+"',"
+            +"post_allocated_value='"+UnitWish[i].children[j].allocated_value+"'"
+            ison.db.query(mysql,function(err,data){
+                that.step();
+            });
+        }
+    }
 
-  },function(data){
+},function(data){
 
         postman({successOr:true})
    })
 }
-/**
-* @brief 均分剩余券表时，将无法容纳分配券的小组剔除
-* @author liulin
-* @param[in] a=ItemPreDiv[m] - 总券中的某一只剩余券  b=UnitWish 小组心愿清单
-* @return temp。可被分配的小组
-*/
 
-export function checkUnitBp(a,b){
-    var temp=clone(b);
-    var value=100*a.market_value;
-
-    for(var i=0;i<temp.length;i++){
-        var left_value=Number(temp[i].tid_bp)-Number(temp[i].allocated_sum_value)
-        if(left_value<value){
-            //该组直接out
-            temp.splice(i,1)
-        }
-    }
-    return temp;
-}
-/**
-* @brief 将券表a分给temp小组
-* @author liulin
-* @param[in] a=ItemPreDiv[m] - 总券中的某一只剩余券  temp - 可分配的小组信息  UnitWish 小组心愿清单
-* @return temp。可被分配的小组
-*/
-
-export function allocateGroup(a,temp,UnitWish){
-     for(var m=0;m<temp.length;m++){
-         for(var n = 0; n < UnitWish.length; n++){
-             if(UnitWish[n].tid===temp[m].tid){
-                var fffflag=0;
-                for(var j = 0; j < UnitWish[n].children.length; j++) {
-                    if (UnitWish[n].children[j].code === a.code) {
-                         UnitWish[n].children[j].allocated_amount = Number(UnitWish[n].children[j].allocated_amount) + 100;
-                         UnitWish[n].children[j].allocated_value=Number(UnitWish[n].children[j].allocated_amount ) * Number(a.market_value);
-                         UnitWish[n].allocated_sum_value=Number(UnitWish[n].allocated_sum_value)+100*Number(a.market_value)
-                         console.log(UnitWish[n].allocated_sum_value +"分配总量");
-                         console.log(UnitWish[n].children[j].allocated_amount +"被平分且原来有时的数量");
-                         fffflag=1;
-                        break;
-                    }
-                }
-                if(fffflag===0){
-                   var cindex_insert=UnitWish[n].children.length;
-                   var itemGroup = { cindex: '', code: '', cname: '', amount: '', flag: '', allocated_value: '', allocated_amount: '' };
-                       itemGroup.cindex = cindex_insert+1;
-                       itemGroup.code = a.code;
-                       itemGroup.cname = a.cname;
-                       itemGroup.amount = 0;
-
-                       itemGroup.flag = 1; //分配
-                       itemGroup.allocated_value =100 * Number(a.market_value);
-                       itemGroup.allocated_amount = 100;
-                       UnitWish[n].allocated_sum_value+=100*Number(a.market_value)
-                       UnitWish[n].children.push(itemGroup);
-                    //    console.log(UnitWish[n].allocated_sum_value +"分配总量2");
-
-                 }
-             }
-         }
-     }
-     for(var p=0;p<UnitWish.length;p++){
-         console.log("sssssssssss",UnitWish[p].allocated_sum_value);
-     }
-}
 /**
 * @brief 从n个小组中随机选出不重复的times个小组
 * @author liulin
@@ -513,8 +426,8 @@ export function allocateGroup(a,temp,UnitWish){
 * @return randomTemp。选取结果
 */
 
-export function randomTeams(times,UnitWish) {
-    var temp=clone(UnitWish);
+export function randomTeams(times,U) {
+    var temp=clone(U);
     var randomTemp=[];
 
     for(var i=0;i<times;i++) {
@@ -528,48 +441,39 @@ export function randomTeams(times,UnitWish) {
             break;
         }
     }
-    console.log("rrrrrrrrrrrr======",JSON.stringify(randomTemp))
+    // console.log("rrrrrrrrrrrr======",JSON.stringify(randomTemp))
     return randomTemp;
 }
 
 /**
-* @brief 满足愿望清单之后，剩余券的分配
+* @brief 均分剩余券表时，将无法容纳分配券的小组剔除
 * @author liulin
-* @param[in] ItemPreDiv - 总券 UnitWish - 小组心愿清单
+* @param[in] a=ItemPreDiv[m] - 总券中的某一只剩余券  b=UnitWish 小组心愿清单,num判断剩余的数目
+* @return temp。可被分配的小组
 */
 
-//满足愿望清单之后，剩余券的分配
-export function averageAllocated(ItemPreDiv,UnitWish) {
-    var leave=0;
-    for (var i=0;i<ItemPreDiv.length;i++) {
-        while(ItemPreDiv[i].amount>=100) {
-            var times=ItemPreDiv[i].amount/100;
-            var temp=checkUnitBp(ItemPreDiv[i],UnitWish);
-            console.log("========qqqqqqqqqq",temp.length)
-            if(!temp.length) {
-                leave++;
-                console.log("========ssssssssssss",leave)
-                return leave;
-            }
-            else {
-                if(times>=temp.length) {
-                    //给选出来的小组都分配
-                     allocateGroup(ItemPreDiv[i],temp,UnitWish);
-                     ItemPreDiv[i].amount=Number(ItemPreDiv[i].amount)-100*temp.length;
+export function checkUnitBp(a,b,num){
+    var temp=clone(b);
+    var value=num*a.market_value;
 
-                }
-                else {
-                    //随机选出times个组并对其进行分配
-                    var randomTemp=randomTeams(times,UnitWish);
-                    allocateGroup(ItemPreDiv[i],randomTemp,UnitWish);
-                    ItemPreDiv[i].amount=Number(ItemPreDiv[i].amount)-100*times;
-                }
-                return 0;
-
-            }//总券有剩余，给予提示，进行更改
-
+    for(var i=0;i<temp.length;i++){
+        var left_value=Number(temp[i].tid_bp)-Number(temp[i].allocated_sum_value)
+        if(left_value<value){
+            //该组直接out
+            temp.splice(i,1)
         }
     }
+    return temp;
+}
+export function checkMinBp(a,b){
+    var minBp=100;
+    for(var i=0;i<b.length;i++){
+        var left_value=Number(b[i].tid_bp)-Number(b[i].allocated_sum_value);
+        if(left_value<minBp){
+            minBp=left_value;
+        }
+    }
+    return minBp;
 }
 /**
 * @brief 分配结果清单中查找默认显示数据
@@ -588,6 +492,112 @@ export function getMinTid(postman) {
         }
     })
 }
+
+/**
+* @brief 将券表a分给temp小组amount数量的券
+* @author liulin
+* @param[in] a=ItemPreDiv[m] - 总券中的某一只剩余券  temp - 可分配的小组信息  UnitWish 小组心愿清单
+* @return temp。可被分配的小组
+*/
+
+export function allocateGroup(a,temp,UnitWish,amount){
+     for(var m=0;m<temp.length;m++){
+         for(var n = 0; n < UnitWish.length; n++){
+             if(UnitWish[n].tid===temp[m].tid){
+                var fffflag=0;
+                for(var j = 0; j < UnitWish[n].children.length; j++) {
+                    if (UnitWish[n].children[j].code === a.code) {
+                         UnitWish[n].children[j].allocated_amount = Number(UnitWish[n].children[j].allocated_amount) + amount;
+                         UnitWish[n].children[j].allocated_value=Number(UnitWish[n].children[j].allocated_amount ) * Number(a.market_value);
+                         UnitWish[n].allocated_sum_value=Number(UnitWish[n].allocated_sum_value)+amount*Number(a.market_value);
+
+                        //  console.log(UnitWish[n].allocated_sum_value +"分配总量");
+                        //  console.log(UnitWish[n].children[j].allocated_amount +"被平分且原来有时的数量");
+                         fffflag=1;
+                        break;
+                    }
+                }
+                if(fffflag===0){
+                   var cindex_insert=UnitWish[n].children.length;
+                   var itemGroup = { cindex: '', code: '', cname: '', amount: '', flag: '', allocated_value: '', allocated_amount: '' };
+                       itemGroup.cindex = cindex_insert+1;
+                       itemGroup.code = a.code;
+                       itemGroup.cname = a.cname;
+                       itemGroup.amount = 0;
+
+                       itemGroup.flag = 1; //分配
+                       itemGroup.allocated_value =amount * Number(a.market_value);
+                       itemGroup.allocated_amount = amount;
+                       UnitWish[n].allocated_sum_value+=amount*Number(a.market_value)
+                       UnitWish[n].children.push(itemGroup);
+                    //    console.log(UnitWish[n].allocated_sum_value +"分配总量2");
+
+                 }
+             }
+         }
+     }
+    //  for(var p=0;p<UnitWish.length;p++){
+    //     //  console.log("sssssssssss",UnitWish[p].allocated_sum_value);
+    //  }
+}
+/**
+* @brief 满足愿望清单之后，剩余券的分配
+* @author liulin
+* @param[in] ItemPreDiv - 总券 UnitWish - 小组心愿清单
+*/
+export function averageAllocated(ItemPreDiv,UnitWish){
+    var leave=0;
+    for (var i=0;i<ItemPreDiv.length;i++){
+        while(ItemPreDiv[i].amount){
+            var I=ItemPreDiv[i].amount;
+            var temp=checkUnitBp(ItemPreDiv[i],UnitWish,1);
+            var _amount=0;
+            if(temp.length){
+                _amount=parseInt(I/(temp.length));
+                if(_amount){
+                    var minBp=checkMinBp(ItemPreDiv[i],temp);
+                    if(minBp>=_amount){
+                        allocateGroup(ItemPreDiv[i],temp,UnitWish,_amount);
+                        ItemPreDiv[i].amount=parseInt(ItemPreDiv[i].amount-(_amount*temp.length));
+                    }
+                    else {
+
+                        allocateGroup(ItemPreDiv[i],temp,UnitWish,minBp);
+                        ItemPreDiv[i].amount=parseInt(ItemPreDiv[i].amount-(minBp*temp.length));
+                    }
+                }
+                else{
+                    var temp0=randomTeams(I,temp);
+                    allocateGroup(ItemPreDiv[i],temp0,UnitWish,1);
+                    ItemPreDiv[i].amount=0;
+                }
+            }
+            else{
+                leave++;
+                return leave;
+            }
+
+        }
+    }
+     return leave;
+}
+/*
+*
+**/
+export function maxLength(UnitWish){
+    var max=0;
+    for(var i=0;i<UnitWish.length;i++){
+        if(UnitWish[i].children.length>max){
+            max=UnitWish[i].children.length;
+        }
+    }
+    return max;
+}
+
+
+
+
+
 
 export function getNamebyTid(postman,tid) {
     var ret={
@@ -812,8 +822,8 @@ export function randomAllocatedConfirm() {
     var trid_flag;
     updateModalState('js-random-allocated-comfirm', 'hide')
     trid_flag=cur_div_on_btn_id.replace(/[^0-9]/ig,"");
-    trid_id=$("[flag="+"'"+trid_flag+"'"+"]").attr("id")
-    tid_id_first=$("[flag="+"'"+trid_flag+"'"+"]").next().children().eq(0).attr("tid")
+    trid_id=$("[flag='"+trid_flag+"']").attr("id")
+    tid_id_first=$("[flag='"+trid_flag+"']").next().children().eq(0).attr("tid")
 
     groupOutput(trid_id,tid_id_first);
     display_tid_now=tid_id_first;
@@ -894,7 +904,7 @@ export function groupDisplay(tid) {
 export function groupOutput(trid_id,tid_id) {
     unitRandmDiv(trid_id,maid,function(err,data) {
         if(data.leave) {
-            console.log("总券有剩余～亲～")
+            console.log("总券有剩余～您的bp不够啦～亲～")
         }
         else if(data.successOr) {
             console.log("tttttttttttt",data.successOr);
@@ -977,4 +987,125 @@ export function updateModalState(className, showState) {
 //     }
 // }
 
+// export function averageAllocated(ItemPreDiv,UnitWish) {
+//     var leave=0;
+//     for (var i=0;i<ItemPreDiv.length;i++) {
+//         while(ItemPreDiv[i].amount>=(UnitWish.length*100)) {
+//             var times=ItemPreDiv[i].amount/100;
+//             var temp=checkUnitBp(ItemPreDiv[i],UnitWish,100);
+//             // console.log("========qqqqqqqqqq",temp.length)
+//             if(!temp.length) {
+//                 leave++;
+//                 console.log("========ssssssssssss",leave)
+//                 return leave;
+//             }
+//             else {
+//                 if(times>=temp.length) {
+//                     //给选出来的小组都分配
+//                      allocateGroup(ItemPreDiv[i],temp,UnitWish,100);
+//                      ItemPreDiv[i].amount=Number(ItemPreDiv[i].amount)-100*temp.length;
+//
+//                 }
+//                 else {
+//                     //随机选出times个组并对其进行分配
+//                     var randomTemp=randomTeams(times,UnitWish);
+//                     allocateGroup(ItemPreDiv[i],randomTemp,UnitWish,100);
+//                     ItemPreDiv[i].amount=Number(ItemPreDiv[i].amount)-100*times;
+//                 }
+//                 return 0;
+//
+//             }//总券有剩余，给予提示，进行更改
+//
+//         }
+//         //当剩下的这只券小于等于100的时候;
+//         while(ItemPreDiv[i].amount>0&&ItemPreDiv[i].amount<(UnitWish.length*100)){
+//             var I=ItemPreDiv[i].amount;
+//             var _amount=parseInt(I/UnitWish.length);
+//             var _amount0=0;
+//             var I0=_amount*UnitWish.length;
+//             if(I0!=I){
+//                 _amount0=parseInt(I-(UnitWish.length)*_amount);
+//             }
+//             var minBp=checkMinBp(ItemPreDiv[i],UnitWish);
+//             if(minBp>_amount){
+//              allocateGroup(ItemPreDiv[i],temp,UnitWish,_amount);
+//             }
+//
+//
+//
+//
+//
+//
+//
+//             var temp=checkUnitBp(ItemPreDiv[i],UnitWish,100);
+//
+//             var _amount=parseInt(I/UnitWish.length);
+//             var _amount0=0;
+//             var I0=_amount*UnitWish.length;
+//             if(I0!=I){
+//                 _amount0=parseInt(I-(UnitWish.length)*_amount);
+//             }
+//         }
+//     }
+// }
+/**
+* @brief 从n个小组中随机选出不重复的times个小组
+* @author liulin
+* @param[in] times- 选取个数 UnitWish 小组心愿清单
+* @return randomTemp。选取结果
+*/
+
+// export function randomTeams(times,UnitWish) {
+//     var temp=clone(UnitWish);
+//     var randomTemp=[];
+//
+//     for(var i=0;i<times;i++) {
+//         if(temp.length>0) {
+//             var arrIndex = Math.floor(Math.random()*temp.length);
+//             randomTemp[i] = temp[arrIndex];
+//             temp.splice(arrIndex, 1);
+//
+//         }
+//         else {
+//             break;
+//         }
+//     }
+//     // console.log("rrrrrrrrrrrr======",JSON.stringify(randomTemp))
+//     return randomTemp;
+// }
+/**
+* @brief 判断是否有未分配完的股票
+* @author Liulin
+* @param[in] ItemPreDiv 待分配的总券
+* @return allStockFlag标志。1为分配完成，否则为0；
+*/
+
+  // function checkUnitStock(ItemPreDiv){
+  //
+  //     for(var i=0;i<ItemPreDiv.length;i++){
+  //         if(ItemPreDiv[i].amount){
+  //             allStockFlag=0;
+  //         }
+  //     }
+  //       return allStockFlag;
+  //
+  // }
+  /**
+  * @brief 判断是否有未满足的心愿
+  * @author Liulin
+  * @param[in] UnitWish 小组心愿清单
+  * @return teamAllocateFlag标志。1为分配完成，否则为0；
+  */
+
+ //  function checkGroupWish(UnitWish){
+ //
+ //    for(var i=0;i<UnitWish.length;i++){
+ //        for(var j=0;j<UnitWish[i].children.length;j++){
+ //            if(UnitWish[i].children[j].flag!==1){
+ //                teamAllocateFlag=0;
+ //            }
+ //        }
+ //    }
+ //    return teamAllocateFlag;
+ // }
 </script>

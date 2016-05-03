@@ -63,8 +63,8 @@
     width:264px !important;
     height: 200px !important;
     margin:0 auto !important;
-   }   
-   
+   }
+
    .ui.fluid.button{
     display: block;
     padding: 0 !important;
@@ -129,7 +129,12 @@ export function getUser(postman){
     }
 }
 
+export function autoLogin(postman){
+    postman(ison.login)
+}
+
 </script>
+
 
 // -----------------------------------------------------------------------------
 
@@ -178,6 +183,35 @@ export function ready(){
         }
     })
 
+    /* 方便调试，当根目录有文件login.json且内容为
+     {
+	"maid": "1990" ,
+	"username": "aaa" ,
+	"password": "1234"
+    }
+    的时候，实行自动登录，方便调试
+    */
+    autoLogin(function(err, login){
+            if(err){
+                console.log('auto login info err = ', err)
+            }else{
+                console.log('auto login info = ', login)
+                if(login.maid && login.username && login.password){
+                    self.maid = login.maid;
+                    self.username = login.username;
+                    self.password = login.password;
+
+                    // 延迟一下登录，不知道哪里会发生副作用
+                    // notAuto 不自动登录  但是读取账号信息
+                    if(!login.notAuto){
+                        setTimeout(function() {
+                            self.onsubmit()
+                        }, 500) 
+                    }
+
+                }
+            }
+    })
 
 }
 

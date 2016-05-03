@@ -46,8 +46,7 @@
           <div class="header">你的用户注册已成功。 </div>
           <p>现在你可以用你选择的用户名登录了</p>
         </div> -->
-
-        <div class="js_asked_list custom popup top left transition hidden">
+        <div class="js_asked_list custom popup transition hidden">
             <div class="ui success message">
                 <div class="handle lk bottom box" v-for="item in askedExchangeTemp">
                     <span>{{item.ask_tname}}想用{{item.ask_cname}}（{{item.ask_volume}},{{item.ask_value}}）和你换{{item.asked_cname}}（{{item.asked_volume}},{{item.asked_value}}）</span>
@@ -55,8 +54,9 @@
                     <button class="ui primary button" v-on:click="askConfirm(item.asked_tid+'||'+item.asked_code,item.id)"><i class="tiny inverted checkmark icon"></i> 同意 </button>
                 </div>
             </div>
-        </div>
+        </div> 
     </div>
+   
     <div class="data right" id="js_right_column">
         <p class="title">公共券池</p>
 <!--     <div v-for="item in askExchangeList">
@@ -727,6 +727,8 @@ export function getWishList(oid){
 }
 
 export function reload(){
+    //csp.fixTableHead("js-my-stocks-table", "100%", "100%")
+    //csp.fixTableHead("js-expect-stocks-table", "100%", "100%")   
     var self = this
     self.$nextTick(function() {
         jQuery(".js-update-view").removeClass("active")
@@ -760,19 +762,24 @@ export function reload(){
             }
         });
 
+        
+        //jQuery('.positive').click(function(){
+        //    self.askedExchangeTemp = self.askedExchange[jQuery(this).attr('key')]
+        //    console.log(self.askedExchangeTemp)
+            //jQuery('.js_asked_list').css('display','block')
+        //})
+
         $('.positive')
           .popup({
-            popup : $('.js_asked_list'),
+            popup : '.js_asked_list',
             on    : 'click',
-            position : 'bottom center',
+            position   : 'bottom left',
+            target: '.data.left',
+            inline : false,
             onShow:function(event){
                 self.askedExchangeTemp = self.askedExchange[$(event).attr('key')]
             }
           })
-
-        csp.fixTableHead("js-my-stocks-table", "100%", "100%")
-        csp.fixTableHead("js-expect-stocks-table", "100%", "100%")
-
     });
 }
 

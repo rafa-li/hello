@@ -26,6 +26,18 @@ try{
     }
 }
 
+// 自动登录
+try{
+    ison.login = require("./login.json")
+    console.error('ison.login ', ison.login)
+}catch(e) {
+    if(e.code=="MODULE_NOT_FOUND") {
+        ison.login = {}
+    }else {
+        console.error(e)
+    }
+}
+
 
 // 自动打包
 if( process.argv.includes("--dev") ){

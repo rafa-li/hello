@@ -12,6 +12,7 @@
 <div class="data-container">
 <div class="data">
 <div>
+    <widget-trid-dropdown v-ref:trid_dropdown0></widget-trid-dropdown>
     <button class="ui primary button" v-on:click="updateModalState('js-team-create-page', 'show')" style="margin-left:0;"> 新建小组 </button>
     <button class="ui button" v-on:click="refreshTeam"> 刷新 </button>
 </div>
@@ -104,7 +105,7 @@
         <div style="float:left;">
             <div class="ui sub header"> 交易单元 </div>
             <div style="width:5px; height:5px"></div>
-            <widget-trid-dropdown v-ref:trid_dropdown></widget-trid-dropdown>
+            <widget-trid-dropdown v-ref:trid_dropdown1></widget-trid-dropdown>
         </div>
         <div style="float:right;" >
             <div class="ui sub header"> 小组名称 </div>
@@ -278,15 +279,17 @@ export function getJoinedTraders(postman) {
  * @param {String} maid     - 资产管理人
  */
 export function getTeams(postman, inPutParm) {
-    var sql = "SELECT ti.tid, ti.tname, ti.trid, td.trname, tm.traderid, tr.oname, trd.bp FROM `csp_team_info` as ti LEFT JOIN tatrd as td ON ti.trid=td.trid LEFT JOIN csp_team_member as tm ON ti.tid=tm.tid LEFT JOIN tsoper as tr ON tr.oid=tm.traderid LEFT JOIN tstrader as trd ON (trd.trid=tm.trid AND trd.traderid=tm.traderid) WHERE ti.`trid` LIKE '"+ inPutParm.maid +".%' ORDER BY tid";
+    console.log("inPutParm--->",inPutParm)
+    var sql = "SELECT ti.tid, ti.tname, ti.trid, td.trname, tm.traderid, tr.oname, trd.bp FROM csp_team_info as ti LEFT JOIN tatrd as td ON ti.trid=td.trid LEFT JOIN csp_team_member as tm ON ti.tid=tm.tid LEFT JOIN tsoper as tr ON tr.oid=tm.traderid LEFT JOIN tstrader as trd ON (trd.trid=tm.trid AND trd.traderid=tm.traderid) WHERE ti.trid = '"+ inPutParm.trid +" ' ORDER BY tid";
     var ret ={
         "error":false,
         "theTeams":[],
         "pages":0,
     }
     ison.db.query(sql, function(err, data) {
+
         if(!err){
-        console.log(sql, "--->", JSON.stringify(data))
+        //console.log(sql, "--->", data)
 
         data.push({tid:-1})  // 主要是为了方便写后面的for循环逻辑
 
@@ -338,6 +341,7 @@ export function getTeams(postman, inPutParm) {
         ret.pages = Math.ceil(parseFloat(teams.length/inPutParm.pageCount))  // 总页码
         postman(ret)
     }else{
+        console.log(err)
         ret.error = true
         postman(ret)
     }
@@ -472,20 +476,45 @@ export function updateTeam(postman, tid, tname, traders){
     })
 }
 
+
 /**
-* @desc 从登录session获取maid
-* @func getMaid
+* @desc 获取登录者的conlevel
+* @func getConlevel
 * @author lizhexi
 */
-export function getMaid(postman){
-    postman({maid:postman.req.session.maid});
+export function getConlevel(postman){
+    var oid = postman.req.session.oid
+    var retData={
+        "error":false,
+        "conlevel":'',
+        "cellid":'',
+        "oid":oid,
+    }
+    var conSQL = "SELECT conlevel ,cellid FROM tsoper_conlevel WHERE "
+               + "( conlevel =28 OR conlevel =29) AND oid = '"
+               + oid+"'";
+    ison.db.query(conSQL,function(err,data){
+        if(!err){
+        //    console.log(conSQL,"------>")
+            retData.conlevel = data[0].conlevel;
+            retData.cellid = data[0].cellid;
+            postman(retData);
+        }else{
+            retData.error = true;
+            console.log("conlevel err-->",err)
+            postman(retData)
+        }
+    })
+
 }
 </script>
 
 
 <script>
 var curTid = ''                  /** 当前点击的tid(小组id)*/
+var curTrid= ''
 var maid ='';
+var curConlevel = ''
 var curPage = 1                 /** 当前页面 */
 /**
  * @func
@@ -508,15 +537,27 @@ export function data() {
  */
 export function ready() {
     var self = this
+            getConlevel(function(err,data){
+                if(!data.error){
+                    var oid = data.oid;
+                    maid = oid.split(".")[0];
+                    curConlevel = data.conlevel
+                    if(curConlevel==29){
+                        self.$refs.trid_dropdown0.updateDropdownList(maid)
 
-    this.$refs.pagination.setTotalPage(parseInt(1)) // 仅供测试
-    getMaid(function(err, data){
-        if(!err){
-            maid = data.maid;
-            console.log('TradeTeamManage maid--->', maid)
-            self.$refs.trid_dropdown.updateDropdownList(maid)                   // 仅供测试
-        }
-    })
+                    }else{
+                        curTrid = data.cellid
+                            self.$refs.trid_dropdown0.updateTrid(curTrid)
+                            self.$refs.trid_dropdown1.updateTrid(curTrid)
+                            getTraders(curTrid,function(err, receiveData){
+                                if(!err){
+                                    self.traders = receiveData
+                                }
+                            })
+                    }
+                }
+            })
+
 
     // 详情按钮
     jQuery(this.$el).on("click", ".js-team-show-btn", function(){
@@ -593,6 +634,9 @@ export function ready() {
  */
 export var  events = {
     'trid-changed': function (trid) {
+        curTrid = trid;
+        this.$refs.trid_dropdown1.updateTrid(trid)
+        this.refreshTeam()
         getTraders(trid, (err, receiveData)=> {
             this.traders = receiveData
         })
@@ -612,7 +656,7 @@ export function getConditions(){
     var conditions = {}
         conditions.page = curPage
         conditions.pageCount = csp.PAGE_COUNT
-        conditions.maid = maid
+        conditions.trid = curTrid
 
     return conditions
 }
@@ -628,6 +672,7 @@ export function refreshTeam() {
     var self = this
     var sendData = getConditions();
     getTeams(sendData, function(err, receiveData){
+        console.log(JSON.stringify(receiveData));
         if(!receiveData.error){
             console.log(JSON.stringify(receiveData))
             self.teams = receiveData.theTeams;
@@ -660,71 +705,80 @@ export function createTeamConfirm() {
     var self = this
 
     var tname = jQuery(".js-create-team-name").val()
+
     var traders = []
+            if(tname!=''&&tname != null){
+                            jQuery(".js-team-create-checkbox").each(function(){
+                                if(jQuery(this).checkbox('is checked')){
+                                    console.log(jQuery(this).attr("traderid"), jQuery(this).attr("trid"))
+                                    var trader = {
+                                        "traderid":jQuery(this).attr("traderid"),
+                                        "trid":jQuery(this).attr("trid"),
+                                    }
+                                    traders.push(trader)
+                                }
+                            });
+                            getJoinedTraders(function(err, receiveData){
+                                if(!err){
+                                    var joinedTraders = receiveData
+                                    var existingTraders = []
+                                    for(var i=0; i<joinedTraders.length; i++){
+                                        for(var j=0; j<traders.length; j++){
+                                            if(joinedTraders[i].traderid === traders[j].traderid){
+                                                existingTraders.push(joinedTraders[i])
+                                            }
+                                        }
+                                    }
 
-    jQuery(".js-team-create-checkbox").each(function(){
-        if(jQuery(this).checkbox('is checked')){
-            console.log(jQuery(this).attr("traderid"), jQuery(this).attr("trid"))
-            var trader = {
-                "traderid":jQuery(this).attr("traderid"),
-                "trid":jQuery(this).attr("trid"),
-            }
-            traders.push(trader)
-        }
-    });
-    getJoinedTraders(function(err, receiveData){
-        if(!err){
-            var joinedTraders = receiveData
-            var existingTraders = []
-            for(var i=0; i<joinedTraders.length; i++){
-                for(var j=0; j<traders.length; j++){
-                    if(joinedTraders[i].traderid === traders[j].traderid){
-                        existingTraders.push(joinedTraders[i])
-                    }
-                }
-            }
+                                    if(existingTraders.length > 0){
+                                        var msg = "ID 为 "
+                                        for(var i=0; i<existingTraders.length; i++){
+                                            msg += existingTraders[i].traderid + " "
+                                        }
+                                        msg += "已加入小组！不能重复选择"
+                                        csp.notify('notice', {
+                                            size: 'mini',
+                                            icon: false,
+                                            msg: msg,
+                                            delay: 15000
+                                        });
 
-            if(existingTraders.length > 0){
-                var msg = "ID 为 "
-                for(var i=0; i<existingTraders.length; i++){
-                    msg += existingTraders[i].traderid + " "
-                }
-                msg += "已加入小组！不能重复选择"
-                csp.notify('notice', {
-                    size: 'mini',
-                    icon: false,
-                    msg: msg,
-                    delay: 15000
-                });
+                                    } else{
+                                        jQuery(".js-update-view").addClass("active")
+                                        updateModalState('js-team-create-page', 'hide')
+                                        if(traders.length > 0){
+                                                insertTeam(tname, traders, function(err, receiveData){
+                                                    if(err){
+                                                        console.log(err)
+                                                    }else{
+                                                        console.log("insertTeam", receiveData)
+                                                        self.refreshTeam()
+                                                    }
+                                                })
+                                            }else if(traders.length === 0){
+                                                csp.notify('notice', {
+                                                    size: 'mini',
+                                                    icon: false,
+                                                    msg: '创建小组失败，请在创建时选择交易员',
+                                                    delay: 15000
+                                                });
+                                                self.refreshTeam()
 
-            } else{
-                jQuery(".js-update-view").addClass("active")
-                updateModalState('js-team-create-page', 'hide')
-                if(traders.length > 0){
-                        insertTeam(tname, traders, function(err, receiveData){
-                            if(err){
-                                console.log(err)
-                            }else{
-                                console.log("insertTeam", receiveData)
-                                self.refreshTeam()
-                            }
-                        })
-                    }else if(traders.length === 0){
+                                            }
+                                    }
+
+                                }else{
+                                     console.log("getJoinedTraders err-->",err)
+                                }
+                            })
+                    }else{
                         csp.notify('notice', {
                             size: 'mini',
                             icon: false,
-                            msg: '创建小组失败，请在创建时选择交易员',
+                            msg: '新建小组名称不能为空',
                             delay: 15000
                         });
-                        self.refreshTeam()
-
                     }
-            }
-
-        }else{
-
-        }
-    })
 }
 
 /**

@@ -3,19 +3,19 @@
     <div class="js-top-bar" >
         <div class="topbar" style="position:fixed;">
             <div class="icon-box">
-                <div class="ui dropdown user">
-                    <input type="hidden" name="above-date">
-                    <i class="small dropdown icon"></i>
-                    <div class="text">资产管理人</div>
+                <div class="ui user">
+                    <!-- <input type="hidden" name="above-date">
+                    <i class="small dropdown icon"></i> -->
+                    <div id="conlevel" class="text"></div>
 
-                    <div class="menu">
+                    <!-- <div class="menu">
                         <div class="item" data-value="0">全局管理人</div>
                         <div class="item" data-value="1">资产管理人</div>
                         <div class="item" data-value="2">交易员管理人</div>
                         <div class="item" data-value="3">交易员</div>
                         <div class="item" data-value="4">朱江华管理人</div>
                         <div class="item" data-value="5">卢郴群管理人</div>
-                    </div>
+                    </div> -->
                 </div>
                 <i class="user icon"></i>
             </div>
@@ -86,169 +86,429 @@
     margin-top: -6px;
 }
 </style>
+<script server>
 
+/**
+* @desc 获取登录者的conlevel
+* @func getConlevel
+* @author lizhexi
+*/
+export function getConlevel(postman){
+    var oid = postman.req.session.oid
+    var retData={
+        "error":false,
+        "conlevel":'',
+        "cellid":'',
+    }
+    var conSQL = "SELECT max(conlevel) AS conlevel ,cellid FROM tsoper_conlevel WHERE "
+               + "( conlevel= 2 OR conlevel =26 OR conlevel =27 OR conlevel =28 OR conlevel =29) AND oid = '"
+               + oid+"'";
+    ison.db.query(conSQL,function(err,data){
+        if(!err){
+            //console.log(conSQL,"------>")
+            retData.conlevel = data[0].conlevel;
+            retData.cellid = data[0].cellid;
+            postman(retData);
+        }else{
+            retData.error = true;
+            console.log("conlevel err-->",err)
+            postman(retData)
+        }
+    })
 
-<script>
+}
+</script>
+
+<script client>
 export function ready() {
-    jQuery('.ui.dropdown.user')
-      .dropdown();
+
+            getConlevel(function(err,data){
+                if(!data.error){
+                var curConlevel = data.conlevel
+                var status = ''
+                  switch(curConlevel){
+                      case 29:status ="资产管理人";
+                              break;
+                      case 28:status ="交易单元管理员";
+                              break;
+                      case 27:status ="交易小组组长";
+                              break;
+                      case 26:status ="账户所有者";
+                              break;
+                      case 2:status ="交易员";
+                              break;
+                  }
+                  jQuery('#conlevel').text(status)
+              }
+          })
+
+
 }
 
 export function registerSideMenu(sideMenu) {
 
-    /** 单元管理 菜单注册 */
-    sideMenu.registerItem(
-        "/unit_manage", {
-            title: "单元管理",
-            icon: "database icon",
-        }
-    )
-    sideMenu.registerItem(
-        "/unit_manage/TridTraderStockTable", {
-            title: "&nbsp&nbsp·&nbsp交易小组管理",
-            component: "unit_manage/TradeTeamManage.vue",
-            click: function() {
-                console.log("交易小组管理")
-            }
-        }
-    )
-    sideMenu.registerItem(
-            "/unit_manage/TridSecuritiesTable", {
-                title: "&nbsp&nbsp·&nbsp交易单元券表" ,
-                component: "unit_manage/TridSecuritiesTable.vue",
-                click: function() {
-                    console.log("交易单元券表")
-            }
-        }
-    )
 
-    /** 视图管理 菜单注册 */
-    sideMenu.registerItem(
-        "/view_manage", {
-            title: "视图管理",
-            icon: "unhide icon",
-        }
-    )
+            getConlevel(function(err,data){
+                if(!data.error){
+                var curConlevel = data.conlevel
+                  switch(curConlevel){
 
-    sideMenu.registerItem(
-        "/view_manage/TaactTradeDetail", {
-            title: "&nbsp&nbsp·&nbsp资产账户交易明细查询",
-            component: "view_manage/TaactTradeDetail.vue",
-            click: function() {
-                console.log("资产账户查询及报表", "view_manage/.vue")
-            }
-        }
-    )
+              case 29:   //csp_资产管理人
 
-    sideMenu.registerItem(
-        "/view_manage/TaactStockDetail", {
-            title: "&nbsp&nbsp·&nbsp资产账户股票汇总表",
-            component: "view_manage/TaactStockDetail.vue",
-            click: function() {
-                console.log("资产账户股票汇总表")
-            }
-        }
-    )
-
-    sideMenu.registerItem(
-        "/view_manage/TridTradeTable", {
-            title: "&nbsp&nbsp·&nbsp交易单元交易明细表",
-            component: "view_manage/TridTradeTable.vue",
-            click: function() {
-                console.log("交易单元交易明细表")
-            }
-        }
-    )
-
-    sideMenu.registerItem(
-        "/view_manage/TridStockTable", {
-            title: "&nbsp&nbsp·&nbsp交易单元股票汇总表",
-            component: "view_manage/TridStockTable.vue",
-            click: function() {
-                console.log("交易单元股票汇总表")
-            }
-        }
-    )
+                       /** 单元管理 菜单注册 */
+                          sideMenu.registerItem(
+                              "/unit_manage", {
+                                  title: "单元管理",
+                                  icon: "database icon",
+                              }
+                          )
+                          sideMenu.registerItem(
+                              "/unit_manage/TridTraderStockTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易小组管理",
+                                  component: "unit_manage/TradeTeamManage.vue",
+                                  click: function() {
+                                      console.log("交易小组管理")
+                                  }
+                              }
+                          )
+                          sideMenu.registerItem(
+                                  "/unit_manage/TridSecuritiesTable", {
+                                      title: "&nbsp&nbsp·&nbsp交易单元券表" ,
+                                      component: "unit_manage/TridSecuritiesTable.vue",
+                                      click: function() {
+                                          console.log("交易单元券表")
+                                  }
+                              }
+                          )
 
 
-    sideMenu.registerItem(
-        "/view_manage/TridTraderTable", {
-            title: "&nbsp&nbsp·&nbsp交易单元交易员汇总表",
-            component: "view_manage/TridTraderTable.vue",
-            click: function() {
-                console.log("交易单元交易员汇总表(TDR003)")
-            }
-        }
-    )
+                          /** 自助分券管理 菜单注册 */
+                          sideMenu.registerItem(
+                              "/allocate_stock_manage", {
+                                  title: "自助分券管理",
+                                  icon: "block layout icon",
+                              }
+                          )
 
-    sideMenu.registerItem(
-        "/view_manage/TridTraderStockTable", {
-            title: "&nbsp&nbsp·&nbsp交易单元交易员股票汇总表",
-            component: "view_manage/TridTraderStockTable.vue",
-            click: function() {
-                console.log("交易单元交易员股票汇总表(TDR004)")
-            }
-        }
-    )
-
-    sideMenu.registerItem(
-        "/view_manage/TridHistoryTable", {
-            title: "&nbsp&nbsp·&nbsp交易单元历史结算表",
-            component: "view_manage/TridHistoryTable.vue",
-            click: function() {
-                console.log("交易单元历史结算表")
-            }
-        }
-    )
-
-    /** 自助分券管理 菜单注册 */
-    sideMenu.registerItem(
-        "/allocate_stock_manage", {
-            title: "自助分券管理",
-            icon: "block layout icon",
-        }
-    )
-
-    sideMenu.registerItem(
-        "/allocate_stock_manage/GroupWishList", {
-            title: "&nbsp&nbsp·&nbsp小组心愿清单",
-            component: "allocate_stock_manage/GroupWishList.vue",
-            click: function() {
-                console.log("小组心愿清单")
-            }
-        }
-    )
+                          sideMenu.registerItem(
+                              "/allocate_stock_manage/GroupWishList", {
+                                  title: "&nbsp&nbsp·&nbsp小组心愿清单",
+                                  component: "allocate_stock_manage/GroupWishList.vue",
+                                  click: function() {
+                                      console.log("小组心愿清单")
+                                  }
+                              }
+                          )
 
 
-    sideMenu.registerItem(
-        "/allocate_stock_manage/Random", {
-            title: "&nbsp&nbsp·&nbsp随机分券",
-            component: "allocate_stock_manage/Random.vue",
-            click: function() {
-                console.log("随机分券")
-            }
-        }
-    )
+                          sideMenu.registerItem(
+                              "/allocate_stock_manage/Random", {
+                                  title: "&nbsp&nbsp·&nbsp随机分券",
+                                  component: "allocate_stock_manage/Random.vue",
+                                  click: function() {
+                                      console.log("随机分券")
+                                  }
+                              }
+                          )
 
-    sideMenu.registerItem(
-        "/allocate_stock_manage/Exchange", {
-            title: "&nbsp&nbsp·&nbsp小组换券",
-            component: "allocate_stock_manage/Exchange.vue",
-            click: function() {
-                console.log("小组换券")
-            }
-        }
-    )
+                          sideMenu.registerItem(
+                              "/allocate_stock_manage/Exchange", {
+                                  title: "&nbsp&nbsp·&nbsp小组换券",
+                                  component: "allocate_stock_manage/Exchange.vue",
+                                  click: function() {
+                                      console.log("小组换券")
+                                  }
+                              }
+                          )
+                          /** 视图管理 菜单注册 */
+                          sideMenu.registerItem(
+                              "/view_manage", {
+                                  title: "视图管理",
+                                  icon: "unhide icon",
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/view_manage/TaactTradeDetail", {
+                                  title: "&nbsp&nbsp·&nbsp资产账户交易明细查询",
+                                  component: "view_manage/TaactTradeDetail.vue",
+                                  click: function() {
+                                      console.log("资产账户查询及报表", "view_manage/.vue")
+                                  }
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/view_manage/TaactStockDetail", {
+                                  title: "&nbsp&nbsp·&nbsp资产账户股票汇总表",
+                                  component: "view_manage/TaactStockDetail.vue",
+                                  click: function() {
+                                      console.log("资产账户股票汇总表")
+                                  }
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/view_manage/TridTradeTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易单元交易明细表",
+                                  component: "view_manage/TridTradeTable.vue",
+                                  click: function() {
+                                      console.log("交易单元交易明细表")
+                                  }
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/view_manage/TridStockTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易单元股票汇总表",
+                                  component: "view_manage/TridStockTable.vue",
+                                  click: function() {
+                                      console.log("交易单元股票汇总表")
+                                  }
+                              }
+                          )
 
 
-    sideMenu.registerItem(
-        "/demo"
-        , {
-            title: "Demo" ,
-            icon: "wizard" ,
-            component: "demo/FirstPage.vue"
-        }
-    )
+                          sideMenu.registerItem(
+                              "/view_manage/TridTraderTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易单元交易员汇总表",
+                                  component: "view_manage/TridTraderTable.vue",
+                                  click: function() {
+                                      console.log("交易单元交易员汇总表(TDR003)")
+                                  }
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/view_manage/TridTraderStockTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易单元交易员股票汇总表",
+                                  component: "view_manage/TridTraderStockTable.vue",
+                                  click: function() {
+                                      console.log("交易单元交易员股票汇总表(TDR004)")
+                                  }
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/view_manage/TridHistoryTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易单元历史结算表",
+                                  component: "view_manage/TridHistoryTable.vue",
+                                  click: function() {
+                                      console.log("交易单元历史结算表")
+                                  }
+                              }
+                          )
+
+                          break;
+              case 28:    //csp_交易单元管理员
+
+                      /** 单元管理 菜单注册 */
+                          sideMenu.registerItem(
+                              "/unit_manage", {
+                                  title: "单元管理",
+                                  icon: "database icon",
+                              }
+                          )
+                          sideMenu.registerItem(
+                              "/unit_manage/TridTraderStockTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易小组管理",
+                                  component: "unit_manage/TradeTeamManage.vue",
+                                  click: function() {
+                                      console.log("交易小组管理")
+                                  }
+                              }
+                          )
+                          sideMenu.registerItem(
+                                  "/unit_manage/TridSecuritiesTable", {
+                                      title: "&nbsp&nbsp·&nbsp交易单元券表" ,
+                                      component: "unit_manage/TridSecuritiesTable.vue",
+                                      click: function() {
+                                          console.log("交易单元券表")
+                                  }
+                              }
+                          )
+                          /** 自助分券管理 菜单注册 */
+                          sideMenu.registerItem(
+                              "/allocate_stock_manage", {
+                                  title: "自助分券管理",
+                                  icon: "block layout icon",
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/allocate_stock_manage/GroupWishList", {
+                                  title: "&nbsp&nbsp·&nbsp小组心愿清单",
+                                  component: "allocate_stock_manage/GroupWishList.vue",
+                                  click: function() {
+                                      console.log("小组心愿清单")
+                                  }
+                              }
+                          )
+
+
+                          sideMenu.registerItem(
+                              "/allocate_stock_manage/Random", {
+                                  title: "&nbsp&nbsp·&nbsp随机分券",
+                                  component: "allocate_stock_manage/Random.vue",
+                                  click: function() {
+                                      console.log("随机分券")
+                                  }
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/allocate_stock_manage/Exchange", {
+                                  title: "&nbsp&nbsp·&nbsp小组换券",
+                                  component: "allocate_stock_manage/Exchange.vue",
+                                  click: function() {
+                                      console.log("小组换券")
+                                  }
+                              }
+                          )
+                          /** 视图管理 菜单注册 */
+                          sideMenu.registerItem(
+                              "/view_manage", {
+                                  title: "视图管理",
+                                  icon: "unhide icon",
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/view_manage/TridTradeTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易单元交易明细表",
+                                  component: "view_manage/TridTradeTable.vue",
+                                  click: function() {
+                                      console.log("交易单元交易明细表")
+                                  }
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/view_manage/TridStockTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易单元股票汇总表",
+                                  component: "view_manage/TridStockTable.vue",
+                                  click: function() {
+                                      console.log("交易单元股票汇总表")
+                                  }
+                              }
+                          )
+
+
+                          sideMenu.registerItem(
+                              "/view_manage/TridTraderTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易单元交易员汇总表",
+                                  component: "view_manage/TridTraderTable.vue",
+                                  click: function() {
+                                      console.log("交易单元交易员汇总表(TDR003)")
+                                  }
+                              }
+                          )
+
+                          sideMenu.registerItem(
+                              "/view_manage/TridTraderStockTable", {
+                                  title: "&nbsp&nbsp·&nbsp交易单元交易员股票汇总表",
+                                  component: "view_manage/TridTraderStockTable.vue",
+                                  click: function() {
+                                      console.log("交易单元交易员股票汇总表(TDR004)")
+                                  }
+                              }
+                          )
+                          break;
+              case 27:     //csp_交易小组组长
+
+                            /** 自助分券管理 菜单注册 */
+                            sideMenu.registerItem(
+                                "/allocate_stock_manage", {
+                                    title: "自助分券管理",
+                                    icon: "block layout icon",
+                                }
+                            )
+
+                            sideMenu.registerItem(
+                                "/allocate_stock_manage/GroupWishList", {
+                                    title: "&nbsp&nbsp·&nbsp小组心愿清单",
+                                    component: "allocate_stock_manage/GroupWishList.vue",
+                                    click: function() {
+                                        console.log("小组心愿清单")
+                                    }
+                                }
+                            )
+                            sideMenu.registerItem(
+                                "/allocate_stock_manage/Exchange", {
+                                    title: "&nbsp&nbsp·&nbsp小组换券",
+                                    component: "allocate_stock_manage/Exchange.vue",
+                                    click: function() {
+                                        console.log("小组换券")
+                                    }
+                                }
+                            )
+                            break;
+              case 26:      //csp_账户所有者
+
+                            /** 视图管理 菜单注册 */
+                            sideMenu.registerItem(
+                                "/view_manage", {
+                                    title: "视图管理",
+                                    icon: "unhide icon",
+                                }
+                            )
+
+                            sideMenu.registerItem(
+                                "/view_manage/TaactTradeDetail", {
+                                    title: "&nbsp&nbsp·&nbsp资产账户交易明细查询",
+                                    component: "view_manage/TaactTradeDetail.vue",
+                                    click: function() {
+                                        console.log("资产账户查询及报表", "view_manage/.vue")
+                                    }
+                                }
+                            )
+
+                            sideMenu.registerItem(
+                                "/view_manage/TaactStockDetail", {
+                                    title: "&nbsp&nbsp·&nbsp资产账户股票汇总表",
+                                    component: "view_manage/TaactStockDetail.vue",
+                                    click: function() {
+                                        console.log("资产账户股票汇总表")
+                                    }
+                                }
+                            )
+                            break;
+              case 2:   //csp_交易员
+
+                            /** 自助分券管理 菜单注册 */
+                            sideMenu.registerItem(
+                                "/allocate_stock_manage", {
+                                    title: "自助分券管理",
+                                    icon: "block layout icon",
+                                }
+                            )
+
+                            sideMenu.registerItem(
+                                "/allocate_stock_manage/GroupWishList", {
+                                    title: "&nbsp&nbsp·&nbsp小组心愿清单",
+                                    component: "allocate_stock_manage/GroupWishList.vue",
+                                    click: function() {
+                                        console.log("小组心愿清单")
+                                    }
+                                }
+                            )
+                            break;
+
+                  }
+              }else{
+                  console.log("不属于五种规定权限")
+              }
+            })
+
+
+    // sideMenu.registerItem(
+    //     "/demo"
+    //     , {
+    //         title: "Demo" ,
+    //         icon: "wizard" ,
+    //         component: "demo/FirstPage.vue"
+    //     }
+    // )
 
 }
 

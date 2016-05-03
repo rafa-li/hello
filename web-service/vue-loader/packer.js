@@ -45,7 +45,7 @@ module.exports = function(entry, folder, test, restFolder, outputFile, watching)
                     + " var methodNames = window.__rest_index[require.id] || []\r\n"
                     + " for(var i=0;i<methodNames.length;i++){\r\n"
                     + "     var code = \"var \"+methodNames[i]+\" = window.app.createRestMethod(require.id,'\"+methodNames[i]+\"')\"\r\n"
-                    + "     console.log(code);eval(code)\r\n"
+                    + "     eval(code)\r\n"
                     + " }\r\n"
                     + "}\r\n\r\n"
                     + "// --[ "+file+" ]----------------------------------------"

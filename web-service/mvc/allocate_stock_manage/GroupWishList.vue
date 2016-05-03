@@ -94,7 +94,7 @@
         float: left;
         line-height: 42px;
         font-size:14px;
-        margin: 0 20px;
+        margin: 0 10px;
     }
     .js-save-btn {
         float: right;
@@ -155,27 +155,19 @@
     }
     .js-table-container,.trade-unit-stock-table.container{
         height: 75%;
-        overflow: auto;
         margin:0px 0;
+        overflow:auto;
         box-shadow: 0 0 0 1px #e5e5e5 inset;
         border-radius: 5px;
         width:100%;
     }
 
+
 </style>
 
 
 <script server>
-var tid = 0
-var trid = ''
-/**
- * @func getOid
- * @author lizhexi
- * @desc 获取oid值
- */
-export function getOid(postman){
-    postman({success:true,oid:postman.req.session.oid})
-}
+
 
 /**
  * @func getTidClient
@@ -201,14 +193,16 @@ export function getTidClient(postman,traderid){
 * @func getConlevel
 * @author lizhexi
 */
-export function getConlevel(postman,oid){
+export function getConlevel(postman){
+    var oid = postman.req.session.oid
     var retData={
         "error":false,
         "conlevel":'',
         "cellid":'',
+        "oid":oid,
     }
     var conSQL = "SELECT max(conlevel) AS conlevel ,cellid FROM tsoper_conlevel WHERE "
-               + "( conlevel= 2 OR conlevel =20 OR conlevel =21 OR conlevel =22) AND oid = '"
+               + "( conlevel= 2 OR conlevel =27 OR conlevel =28 OR conlevel =29) AND oid = '"
                + oid+"'";
     ison.db.query(conSQL,function(err,data){
         if(!err){
@@ -265,14 +259,14 @@ export function selGroupBPValue(tid,postman) {
  * @desc 获取BP值
  */
 export function getGroupBpValue(postman,tid){
-
         var ret={
             "error":false,
             "BPvalue" : 0.00,
             "msg":'',
 
         }
-        console.log("tid-->",tid)
+        //console.log("thistid--->",thistid)
+        //console.log("tid-->",tid)
            selGroupBPValue(tid, function(data) {
                if (data.error) {
                    console.log("getGroupBPValue error!");
@@ -340,11 +334,12 @@ export function getGroupWishList(postman,tid) {
  * @author wangxiong
  * @desc 提交小组心愿清单
  */
-export function submitWishList(postman, valueStr) {
+export function submitWishList(postman, valueStr,tid) {
     var delSQL = 'DELETE  FROM csp_group_wish_list WHERE tid ='+tid;
+
     ison.db.query(delSQL, function(err, data) {
         if(!err){
-        console.log(delSQL,"del data --->",data)
+        //console.log(delSQL,"del data --->",data)
         var insSQL = 'INSERT INTO csp_group_wish_list(cindex,code,cname,amount,import_date,tid,maid,trid) VALUES'
         + valueStr;
         //console.log("insSql", insSQL);
@@ -364,12 +359,11 @@ export function submitWishList(postman, valueStr) {
 <!-- 前端代码，在浏览器中执行  -->
 <script client>
 var drapingId = "";
-var isAddrow = true;
+var isAddrow = false;
 var BPvalue = 0;
 var marketPrice = 0.00;
 var flag;
 var tid = 0
-var oid = ''
 var maid = ''
 var curTrid = ''
 var curTid = 0
@@ -414,18 +408,18 @@ export function refreshUnitStocks(curTrid){
         if (err) {
             console.log("err----->",err)
         } else {
+            clearTable("left-table")
             if (data.length >= 0) {
                 var insertHtmlStr = '';
-                clearTable("left-table")
                 for (var i = 0; i < data.length; i++) {
-
+                    var index = i+1
                     var stockNo = data[i].code;
                     var stockName = data[i].cname;
                     var stockNum = data[i].amount;
                     var idStr = "left" + data[i].code;
                     var marketVal = parseFloat(stockNum*data[i].preclose).toFixed(2);
                     var tempInsertHtmlStr = '<tr class="js-left-table ui-widget-content" id="'
-                                          + idStr + '"><td>0</td><td>' + stockNo + '</td><td>'
+                                          + idStr + '"><td>'+index+'</td><td>' + stockNo + '</td><td>'
                                           + stockName + '</td><td class="js-num-left">'
                                           + stockNum + '</td><td class="js-num-left">'
                                           + marketVal + '</td></tr>';
@@ -434,13 +428,13 @@ export function refreshUnitStocks(curTrid){
                 if (insertHtmlStr.length > 0) {
                     //console.log("getUnitStocks insertHtmlStr--->", insertHtmlStr);
                     $(".js-left-tbody").append(insertHtmlStr);
-                    dealLefttTableNo();
                     //tableOperator();
                     //左边表格拖拽操作
                     dragLeftTable()
                 }
             }
         }
+
         jQuery(".groupWish-view").removeClass("active");
     });
 }
@@ -465,7 +459,7 @@ export function refreshBP(curTid){
                   groupBP = data.BPvalue
                   BPvalue = groupBP
                   console.log("获取BP值成功")
-               $(".js-bp-value").html("BP:" + groupBP);
+               $(".js-bp-value").html("BP:" + formatNumber(groupBP,2));
           }
  })
 }
@@ -478,9 +472,8 @@ export function refreshGroupWish(curTid){
     getGroupWishList(curTid,function(err,data) {
         if(!data.error){
             var rows = data.groupWishListdata
-            console.log("rows-->",rows)
+            clearTable("right-table")
             if (rows.length >= 0) {
-                clearTable("right-table")
                 var insertHtmlStr = '';
                 for (var i = 0; i < rows.length; i++) {
                     var stockNo = rows[i].code;
@@ -492,7 +485,7 @@ export function refreshGroupWish(curTid){
                     var tempInsertHtmlStr = '<tr class="js-right-row" id="' + idStr + '"><td>' + stockIndex + '</td><td>'
                                     + stockNo + '</td><td>' + stockName + '</td><td class="js-amount-right">'
                                     + '<div class="ui icon input js-stock-num"><input type="text" value="'
-                                    + stockNum + '"><div class="js-num-change"><i class="caret up link icon"></i>'
+                                    + stockNum + '" ><div class="js-num-change"><i class="caret up link icon"></i>'
                                     + '<i class="caret down link icon"></i></div></div></td><td class="js-num-right">'
                                     + marketVal + '</td>'
                                     + '<td><i class="trash outline big link icon" data-content="移除"></i>'
@@ -502,13 +495,10 @@ export function refreshGroupWish(curTid){
                 if (insertHtmlStr.length > 0) {
                     $(".js-right-table").append(insertHtmlStr);
                      tableOperator();
-                    //dragRightTable()
-
-
-                    // dealRightAmount()
                     updateCurMaketValue();
 
                 }
+
                 jQuery(".groupWish-view").removeClass("active");
             }
 
@@ -544,14 +534,13 @@ export function refresh(){
     var trDate = "";   //日期
     var traderId = ""; //交易员ID
     var self =this
-    getOid(function(err,data){
-        if(data.success){
-            var oid = data.oid
-            maid = oid.split(".")[0]
-            getConlevel(oid,function(err,data){
+
+            getConlevel(function(err,data){
                 if(!data.error){
+                  var oid = data.oid
+                  maid = oid.split(".")[0]
                   curConlevel = data.conlevel
-                  if(curConlevel == 20){
+                  if(curConlevel == 29){
                       //获取用户券表数据
                       refreshUnitStocks(curTrid)
                       refreshBP(curTid)
@@ -573,7 +562,6 @@ export function refresh(){
                          }
 
                      })
-                      //获取用户券表数据
                   }
               }else{
                    console.log("err--->",err);
@@ -582,10 +570,8 @@ export function refresh(){
 
 
 
-                //获取小组心愿清单数据
 
-}
-})
+
 
 }
 export function ready() {
@@ -596,20 +582,20 @@ export function ready() {
     jQuery(".groupWish-view").addClass("active");
     refresh();
     tableOperator();
-    getOid(function(err,data){
-        if(!err){
-            oid = data.oid
-            maid = oid.split(".")[0];
-            getConlevel(oid,function(err,data){
+
+            getConlevel(function(err,data){
+
                 if(!data.error){
+                    var oid = data.oid
+                    maid = oid.split(".")[0];
                     curConlevel = data.conlevel
-                    if(curConlevel == 20){
+                    if(curConlevel == 29){
                         curMaid = data.cellid
                         self.$refs.trid_dropdown.updateDropdownList(curMaid)
                     }else{
                         curTrid = data.cellid
                         self.$refs.trid_dropdown.updateTrid(curTrid)
-                        if(curConlevel == 2 || curConlevel == 22){
+                        if(curConlevel == 2 || curConlevel == 27){
                             getTidClient(oid,function(err,data){
                                 if(data.success){
                                     curTid = data.tid
@@ -631,8 +617,7 @@ export function ready() {
                     console.log("err--->",err);
                 }
             })
-        }
-    })
+
 
 
     jQuery(".js-table-container,.group-wish-list-table").droppable({
@@ -643,7 +628,7 @@ export function ready() {
                     var leftRowObj = $('#left' + drapingId);
                     var rightRowObj = $('#right' + drapingId);
                     if (rightRowObj.length > 0) {
-                        //console.log("exist");
+                        console.log("exist");
                         csp.notify('notice', {
                             msg: '该股票已存在于心愿清单，可进行数量更改或删除操作',
                             delay: 15000,
@@ -663,7 +648,7 @@ export function ready() {
                                         var insertHtmlStr = '<tr class="js-right-row" id="' + idStr + '"><td>' + 0 + '</td><td>'
                                                         + stockNo + '</td><td>' + stockName + '</td><td class="js-amount-right">'
                                                         + '<div class="ui icon input js-stock-num"><input type="text" value="'
-                                                        + 100 + '"><div class="js-num-change"><i class="caret up link icon"></i>'
+                                                        + 100 + '" ><div class="js-num-change"><i class="caret up link icon"></i>'
                                                         + '<i class="caret down link icon"></i></div></div></td><td class="js-num-right">'
                                                         + marketVal + '</td>'
                                                         + '<td><i class="trash outline big link icon" data-content="移除"></i>'
@@ -672,11 +657,10 @@ export function ready() {
                                         var tableConObj = tableConObjs[0];
                                         var tableObjs = $(tableConObj).children();
                                         var tableObj = tableObjs[0];
+                                        var tbodyObj = tableObjs[1];
                                         var bodyObjs = $(tableObj).next().children();
-                                    //    console.log("tableObj------->", tableObj);
                                         if (bodyObjs.length > 0) {
-                                            var firstRow = bodyObjs[0];
-                                            $(firstRow).after(insertHtmlStr);
+                                            $(tbodyObj).append(insertHtmlStr);
                                         } else {
                                             $(tableObj).next().append(insertHtmlStr);
                                         }
@@ -784,7 +768,7 @@ export function saveWishLists() {
                 }
                 console.log("valueStr", valueStr);
             }
-            submitWishList(valueStr, function(err, reveiveData) {
+            submitWishList(valueStr, tid,function(err, reveiveData) {
                 if(err){
                     console.log("submit--->",err)
                     csp.notify('notice', {
@@ -808,48 +792,50 @@ export function saveWishLists() {
  */
 export function delayInputDeal(data) {
     var curNumStr = $(data).val();
+    var oldValue =$(data).attr("value");
     var dealNumStr = curNumStr.replace(/\D/g,'');
+    console.log("oldVaue-->",oldValue,"dealNumStr-->",dealNumStr);
     $(data).val(dealNumStr);
     var stockNo = $(data).parent().parent().prev().prev().text();
-    clearTimeout(flag);
-    flag = setTimeout(function() {
-        var tempStr = $(data).val();
+    console.log("stockNo-->",stockNo)
+        var tempStr = dealNumStr
         if (parseInt(tempStr) % 100 == 0) {
-            var rlt = calCurMarketValue(stockNo, parseInt(tempStr));
-            var cAmount = calCurUnitAmount(stockNo, parseInt(tempStr));
-        if(cAmount){
-                if(rlt) {
-
-                }else{
-                    $(data).val(100);
-                    csp.notify('notice', {
-                        msg: '超出BP值，请重新确认数量',
-                        delay: 15000,
-                    });
-                    console.log("超出BP值");
-                }
-            }else{
-                $(data).val(100);
-                csp.notify('notice', {
-                    msg: '超出券表中该支证券数量,请重新确认数量',
-                    delay: 15000,
-                });
-                console.log("超出券表中该支证券数量");
-            }
+             var cAmount = calCurUnitAmount(stockNo, parseInt(tempStr));
+                if(cAmount){
+                     var rlt = calCurMarketValue(stockNo, parseInt(tempStr));
+                        if(rlt) {
+                           $(data).attr("value",dealNumStr)
+                           console.log("cAmount--->",cAmount,"rlt-->",rlt,"替换成功",$(data).attr("value"));
+                        }else{
+                            $(data).val(oldValue);
+                            csp.notify('notice', {
+                                msg: '超出BP值，请重新确认数量',
+                                delay: 15000,
+                            });
+                            console.log("超出BP值");
+                        }
+                    }else{
+                        $(data).val(oldValue);
+                        csp.notify('notice', {
+                            msg: '超出券表中该支证券数量,请重新确认数量',
+                            delay: 15000,
+                        });
+                        console.log("超出券表中该支证券数量");
+                    }
         } else {
             //TODO modal
             csp.notify('notice', {
                 msg: '请输入以100股为单位的数据',
                 delay: 15000,
             });
-            $(data).val(100);
+            $(data).val(oldValue);
         }
         var unitPrice = calStockUnitPrice(stockNo);
         tempStr = $(data).val();
         var curVal = (parseInt(tempStr) * unitPrice).toFixed(2);
         $(data).parent().parent().next().html(curVal);
         updateCurMaketValue();
-    }, 1000);
+
 }
 /**
  * @func dragLeftTable
@@ -870,138 +856,7 @@ export function dragLeftTable(){
         }
     });
 }
-/**
- * @func dragRightTable
- * @desc 右表拖动
- * @author wangxiong
- */
-export function dragRightTable(){
-    jQuery(".js-right-row").draggable({
-        cursor: "move",
-        cursorAt: { top: -2, left: -2 },
-        helper: "clone",
-        start: function() {
-            var rows = $(this).children();
-            var stockNo = $(rows[1]).html();
-            drapingId = stockNo;
-            isAddrow = false;
-        }
-    });
-}
-/**
- * @func dealRightAmount
- * @desc 处理右表数量
- * @author wangxiong
- */
-export function dealRightAmount(){
-    //数量增加100
-    jQuery(".caret.up.link").unbind("click").click(function() {
-        var curNumStr = $(this).parent().prev().val();
-        if (curNumStr == null || curNumStr == undefined || curNumStr == '') {
-            curNumStr = '0';
-        }
-        var stockNo = $(this).parent().parent().parent().prev().prev().html();
-        var stockInput = $(this).parent().prev().val();
-        console.log("curNumStr", curNumStr);
-        console.log("stockNo", stockNo);
-        console.log("stockInput", stockInput);
-         var rlt = calCurMarketValue(stockNo, parseInt(stockInput) + 100);
-         var cAmount=calCurUnitAmount(stockNo, parseInt(stockInput) + 100);
-        if(cAmount){
-                if (rlt) {
-                    console.log("数量增加成功-->", stockNo);
-                    var curNum = 0;
-                    //使input内数据整百出现
-                    if (parseInt(curNumStr) % 100 == 0) {
-                        curNum = parseInt(curNumStr) + 100;
-                        console.log("curNum--->",curNum)
-                    } else {
-                        curNum = parseInt(curNumStr) + (100 - parseInt(curNumStr) % 100);
-                        console.log("curNum--->",curNum)
-                    }
-                    $(this).parent().prev().val(curNum);
-                    var unitPrice = calStockUnitPrice(stockNo);
-                    var curVal = (curNum * unitPrice).toFixed(2);
 
-                    $(this).parent().parent().parent().next().html(curVal);
-                } else {
-                    //TODO 对话框
-                    //$('.overBP.modal').modal('show');
-                    //alert("超过BP值")
-                    csp.notify('notice', {
-                        msg: '超出BP值，请重新确认心愿清单',
-                        delay: 15000,
-                    });
-                    console.log("超出BP值");
-                    console.log("数量增加失败-->", stockNo);
-                }
-           }else{
-               csp.notify('notice', {
-                   msg: '超出券表中该支证券数量,请重新确认数量',
-                   delay: 15000,
-               });
-               console.log("超出券表中该支证券数量");
-           }
-        updateCurMaketValue();
-    });
-
-    //数量减少100
-    jQuery(".caret.down.link").unbind("click").click(function() {
-        var stockNo = $(this).parent().parent().parent().prev().prev().html();
-        var curNumStr = $(this).parent().prev().val();
-        var curNum = 0;
-        var rlt = calCurMarketValue(stockNo, parseInt(curNumStr) - 100);
-        if (rlt) {
-                if (parseInt(curNumStr) % 100 == 0) {
-                    curNum = parseInt(curNumStr) - 100;
-                    console.log("stockNo--->",stockNo)
-                    console.log("curNum--->",curNum)
-                } else {
-                    curNum = parseInt(curNumStr) - parseInt(curNumStr) % 100;
-                    console.log("stockNo--->",stockNo)
-                    console.log("curNum--->",curNum)
-                }
-                if (curNum >= 0) {
-                    $(this).parent().prev().val(curNum);
-                    var unitPrice = calStockUnitPrice(stockNo);
-                    var curVal = (curNum * unitPrice).toFixed(2);
-                    $(this).parent().parent().parent().next().html(curVal);
-                } else if (curNum >= -99) {
-                    $(this).parent().prev().val(0);
-                    $(this).parent().parent().parent().next().html(0);
-                }
-        }else {
-            //TODO 对话框
-            $('.overBP.modal').modal('toggle');
-        }
-        updateCurMaketValue();
-    });
-
-    //防止非法字符
-    jQuery("input").on("keyup", function() {
-        delayInputDeal(this);
-        // var curNumStr = $(this).val();
-        // var dealNumStr = curNumStr.replace(/\D/g,'');
-        // $(this).val(dealNumStr);
-    });
-
-    //隐藏按钮、显示按钮
-    jQuery(".input").on("mouseenter mouseleave", function(event) {
-        var $me = $(this);
-        if( event.type == "mouseenter"){
-            $(this).children(".js-num-change").show();
-        }else if(event.type == "mouseleave" ){
-            $(this).children(".js-num-change").hide();
-        }
-    });
-
-    //删除记录
-    jQuery(".trash, .outline").on("click", function() {
-        $(this).parent().parent().remove();
-        dealRightTableNo();
-        updateCurMaketValue();
-    });
-}
 /**
  * @func tableOperator
  * @desc 操作心愿单
@@ -1104,13 +959,41 @@ export function tableOperator() {
         });
 
         //防止非法字符
-        jQuery("input").on("keyup", function() {
-            delayInputDeal(this);
-            // var curNumStr = $(this).val();
-            // var dealNumStr = curNumStr.replace(/\D/g,'');
-            // $(this).val(dealNumStr);
-        });
+        jQuery("input").focus(function(){
+            var inputObj = this
+            var $inputObj = $(inputObj)
+            var oldValue = $inputObj.attr("value")
+            var isEnter = false
+            var i = 1
+            var m = 1
+                $inputObj.off("keyup").on("keyup",function(event) {
+                    m++;
+                    if(event.keyCode == "13"){
+                        isEnter = true
+                        i=0;
+                        $inputObj.unbind("blur").blur(function(){
+                            delayInputDeal(inputObj);
+                            //console.log("yes")
 
+                        })
+                        $inputObj.blur();
+
+                    }else{
+                        i++;
+                    }
+                });
+
+                    $inputObj.unbind("blur").blur(function(){
+                         if(i == m || i > m){
+                              $inputObj.val(oldValue)
+                              //console.log("i-->",i,"m-->",m)
+                             // console.log("not")
+                          }else{
+
+                          }
+                  })
+
+        })
         //隐藏按钮、显示按钮
         jQuery(".input").on("mouseenter mouseleave", function(event) {
             var $me = $(this);
@@ -1128,95 +1011,49 @@ export function tableOperator() {
             updateCurMaketValue();
         });
 
-//拖动后处理右边行
-        jQuery(".js-right-row").droppable({
-            drop: function(event, ui) {
-                if (drapingId !== undefined && drapingId !== "" && drapingId !== null) {
-                    if (isAddrow) {
-                        //增加一条记录
-                        var leftRowObj = $('#left' + drapingId);
-                        var rightRowObj = $('#right' + drapingId);
-                        if (rightRowObj.length > 0) {
-                            console.log("exist");
-                            return ;
-                        } else {
-                            var calRlt = calCurMarketValue(drapingId, 100);
-                            var cAmount = calCurUnitAmount(drapingId, 100);
-                            if(cAmount){
-                                    if (calRlt) {
-                                        var rowObjs = $(leftRowObj).children();
-                                        var stockNo = $(rowObjs[1]).html();
-                                        var stockName = $(rowObjs[2]).html();
-                                        var stockNum = $(rowObjs[3]).html();
-                                        var marketVal = (100 * calStockUnitPrice(stockNo)).toFixed(2);
-                                        var idStr = "right" + drapingId;
-                                        var insertHtmlStr = '<tr class="js-right-row" id="' + idStr + '"><td>' + 0 + '</td><td>'
-                                                        + stockNo + '</td><td>' + stockName + '</td><td class="js-amount-right">'
-                                                        + '<div class="ui icon input js-stock-num"><input type="text" value="'
-                                                        + 100 + '"><div class="js-num-change"><i class="caret up link icon"></i>'
-                                                        + '<i class="caret down link icon"></i></div></div></td><td class="js-num-right">'
-                                                        + marketVal + '</td>'
-                                                        + '<td><i class="trash outline big link icon" data-content="移除"></i>'
-                                                        + '</td></tr>';
-                                        var curRow = this;
-                                        $(curRow).before(insertHtmlStr);
-                                        updateCurMaketValue();
-                                    } else {
-                                        //TODO 弹出对话框提示超过了BP值
-                                        //$('.overBP.modal').modal('show');
-                                        csp.notify('notice', {
-                                            msg: '超出BP值',
-                                            delay: 15000,
-                                        });
-                                        console.log("超出BP值");
-                                    }
-                                }else{
-                                    csp.notify('notice', {
-                                        msg: '该券在券表中数量不足100，无法添加进心愿清单',
-                                        delay: 15000,
-                                    });
-                                    console.log("超出券表中该支证券数量");
-                                    return ;
-                                }
 
-                        }
-                    } else {
-                        //移动一条记录
-                        var dragRowObj = $('#right' + drapingId);
-                        var htmlStr = $(dragRowObj).html();
-                        var rowObjs = $(dragRowObj).children();
-                        var stockNo = $(rowObjs[1]).html();
-                        var stockName = $(rowObjs[2]).html();
-                        var stockNum1 = $(rowObjs[3]).children();
-                        var stockNum2 = $(stockNum1[0]).children();
-                        var stockNum = $(stockNum2[0]).val();
-                        var marketVal = $(rowObjs[4]).html();
-                        var idStr = "right" + drapingId;
-                        var insertHtmlStr = '<tr class="js-right-row" id="' + idStr + '"><td>' + 0 + '</td><td>'
-                                        + stockNo + '</td><td>' + stockName + '</td><td class="js-amount-right">'
-                                        + '<div class="ui icon input js-stock-num"><input type="text" value="'
-                                        + 100 + '"><div class="js-num-change"><i class="caret up link icon"></i>'
-                                        + '<i class="caret down link icon"></i></div></div></td><td class="js-num-right">'
-                                        + marketVal + '</td>'
-                                        + '<td><i class="trash outline big link icon" data-content="移除"></i>'
-                                        + '</td></tr>';
-                        var curRow = this;
-                        var parentObj = $(curRow);
-                        var pId = $(parentObj).attr("id");
-                        console.log("----->", pId);
-                        console.log("--->", 'right' + drapingId);
-                        if (pId == undefined || pId == "" || pId == null || pId === ('right' + drapingId)) {
-                            return ;
-                        } else {
-                            $(curRow).before(insertHtmlStr);
-                            $(dragRowObj).remove();
-                        }
-                    }
-                    tableOperator();
-                    dealRightTableNo();
+// //右边拖动自行处理
+jQuery(".js-right-row").droppable({
+    accept:".js-right-row ",
+    drop: function(event, ui) {
+        if (drapingId !== undefined && drapingId !== "" && drapingId !== null) {
+
+                //移动一条记录
+                var dragRowObj = $('#right' + drapingId);
+                var htmlStr = $(dragRowObj).html();
+                var rowObjs = $(dragRowObj).children();
+                var stockNo = $(rowObjs[1]).html();
+                var stockName = $(rowObjs[2]).html();
+                var stockNum1 = $(rowObjs[3]).children();
+                var stockNum2 = $(stockNum1[0]).children();
+                var stockNum = $(stockNum2[0]).val();
+                var marketVal = $(rowObjs[4]).html();
+                var idStr = "right" + drapingId;
+
+                var insertHtmlStr = '<tr class="js-right-row" id="' + idStr + '"><td>' + 0 + '</td><td>'
+                                + stockNo + '</td><td>' + stockName + '</td><td class="js-amount-right">'
+                                + '<div class="ui icon input js-stock-num"><input type="text" value="'
+                                + stockNum + '" ><div class="js-num-change"><i class="caret up link icon"></i>'
+                                + '<i class="caret down link icon"></i></div></div></td><td class="js-num-right">'
+                                + marketVal + '</td>'
+                                + '<td><i class="trash outline big link icon" data-content="移除"></i>'
+                                + '</td></tr>';
+                var curRow = this;
+                var parentObj = $(curRow);
+                var pId = $(parentObj).attr("id");
+                console.log("----->", pId);
+                console.log("--->", 'right' + drapingId);
+                if (pId == undefined || pId == "" || pId == null || pId === ('right' + drapingId)) {
+                    return ;
+                } else {
+                    $(curRow).before(insertHtmlStr);
+                    $(dragRowObj).remove();
                 }
-            }
-        });
+            tableOperator();
+            dealRightTableNo();
+        }
+    }
+});
 }
 /**
  * @func dealRightTableNo
@@ -1231,19 +1068,8 @@ export function dealRightTableNo() {
         $(rowNo).text(i + 1);
     }
 }
-/**
- * @func dealLefttTableNo
- * @desc 处理左表编号
- * @author wangxiong
- */
-export function dealLefttTableNo() {
-    var rowObjs = $(".js-left-tbody").children();
-    for (var i = 0; i < rowObjs.length; i++) {
-        var rows = $(rowObjs[i]).children();
-        var rowNo = rows[0];
-        $(rowNo).text(i + 1);
-    }
-}
+
+
 
 /**
  * @func calStockUnitPrice
@@ -1327,7 +1153,8 @@ export function updateCurMaketValue() {
         var cname=$(cnameObj).text();
     }
     marketPrice = curTotalVal.toFixed(2)
-    var curTotalValStr = "市值:" + curTotalVal.toFixed(2);
+    var curTotalValStr = "市值:" + formatNumber(curTotalVal,2);
+
     $(".js-market-value").html(curTotalValStr);
     // if(curTotalVal > BPvalue){
     //     csp.notify('notice', {
@@ -1336,15 +1163,39 @@ export function updateCurMaketValue() {
     //     });
     // }
 }
-/**
- * @func refreshUnitStocks
- * @desc 刷新券表
- * @author lizhexi
- */
+
 
 
 function format (num) {
     return (num.toFixed(2) + '').replace(/\d{1,3}(?=(\d{3})+(\.\d*)?$)/g, '$&,');
 }
+/**
+ * @func formatNumber
+ * @desc 格式化数字
+ * @param {number} num 需要被格式化的数字
+ * @param {int} precision 格式化后的精度
+ * @author lizhexi
+ */
+function formatNumber(num, precision) {
+    var parts;
+    // 判断是否为数字
+    if (!isNaN(parseFloat(num)) && isFinite(num)) {
+        num = Number(num);
+        // 处理小数点位数
+        num = (typeof precision !== 'undefined' ? num.toFixed(precision) : num).toString();
+        // 分离数字的小数部分和整数部分
+        parts = num.split('.');
+        // 整数部分加[separator]分隔, 借用一个著名的正则表达式
+        parts[0] = parts[0].toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1' + ',');
+
+        return parts.join('.');
+    }
+    return NaN;
+}
+function unformat(str){
+    var num =str.split(",")
+    return num.join();
+}
+
 
 </script>
